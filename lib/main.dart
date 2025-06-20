@@ -4,10 +4,18 @@ import 'package:matrixmeds/pages/login.dart';
 import 'package:matrixmeds/pages/check_interaction.dart';
 import 'package:matrixmeds/pages/common_interactions.dart';
 import 'package:matrixmeds/services/auth_service.dart';
-import 'package:http/http.dart' as http;
-import 'package:matrixmeds/config/config.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:matrixmeds/pages/login.dart';
+import 'package:matrixmeds/pages/check_interaction.dart';
+import 'package:matrixmeds/pages/common_interactions.dart';
+import 'package:matrixmeds/services/auth_service.dart';
+import 'package:matrixmeds/api/api_client.dart';
 
-void main() {
+void main() async {
+  // Test the API call
+  await fetchData();
+  
   runApp(const ProviderScope(child: MatrixMedsApp()));
 }
 
@@ -41,15 +49,11 @@ class MatrixMedsApp extends ConsumerWidget {
 
 Future<void> fetchData() async {
   try {
-    final url = '${AppConfig.getBaseUrl()}/api/data';
-    print('Fetching data from: $url');
-    final response = await http.get(Uri.parse(url));
-    if (response.statusCode == 200) {
-      print('Success! Response: ${response.body}');
-    } else {
-      print('Failed to load data. Status code: ${response.statusCode}');
-    }
+    print('Checking backend health...');
+    final result = await ApiClient.getHealthCheck();
+    print('Health check status: ${result['status']}');
+    print('Health check response: ${result['body']}');
   } catch (e) {
-    print('Error fetching data: $e');
+    print('Error checking backend health: $e');
   }
 }
