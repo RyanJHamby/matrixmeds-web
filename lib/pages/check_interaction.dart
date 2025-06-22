@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:matrixmeds/services/api_service.dart';
+import 'package:matrixmeds/models/interaction.dart';
+import 'package:matrixmeds/models/medication.dart';
 import 'package:matrixmeds/widgets/drug_input.dart';
 import 'package:matrixmeds/widgets/interaction_card.dart';
 import 'package:matrixmeds/services/auth_service.dart';
@@ -80,11 +82,10 @@ class _CheckInteractionPageState extends ConsumerState<CheckInteractionPage> {
                   child: _result!.when(
                     data: (data) {
                       if (data == null) return const SizedBox.shrink();
-                      return InteractionCard(
-                        interaction: data['interaction'] ?? false,
-                        severity: data['severity'] ?? 'unknown',
-                        notes: data['notes'] ?? '',
-                      );
+                      final interactions = (data['interactions'] as List<dynamic>).map(
+                        (i) => Interaction.fromJson(i as Map<String, dynamic>),
+                      ).toList();
+                      return InteractionCard(interactions: interactions);
                     },
                     loading: () => const Center(child: CircularProgressIndicator()),
                     error: (error, stack) => Center(

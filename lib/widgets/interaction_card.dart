@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:matrixmeds/models/interaction.dart';
 
 class InteractionCard extends StatelessWidget {
-  final bool interaction;
-  final String severity;
-  final String notes;
+  final List<Interaction> interactions;
 
   const InteractionCard({
     super.key,
-    required this.interaction,
-    required this.severity,
-    required this.notes,
+    required this.interactions,
   });
 
-  IconData _getSeverityIcon() {
+  IconData _getSeverityIcon(String severity) {
     switch (severity) {
       case 'high':
         return Icons.dangerous;
@@ -25,7 +22,7 @@ class InteractionCard extends StatelessWidget {
     }
   }
 
-  Color _getSeverityColor() {
+  Color _getSeverityColor(String severity) {
     switch (severity) {
       case 'high':
         return Colors.red;
@@ -48,49 +45,51 @@ class InteractionCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(
-                  interaction ? Icons.warning : Icons.check_circle,
-                  color: interaction ? Colors.red : Colors.green,
-                  size: 24,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    interaction ? 'Interaction Found' : 'No Interaction Found',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: interaction ? Colors.red : Colors.green,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (interaction)
-              Row(
+            if (interactions.isEmpty)
+              const Text(
+                'No interactions found',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              )
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    _getSeverityIcon(),
-                    color: _getSeverityColor(),
-                  ),
-                  const SizedBox(width: 8),
                   Text(
-                    'Severity: $severity',
-                    style: TextStyle(
-                      color: _getSeverityColor(),
-                      fontWeight: FontWeight.bold,
-                    ),
+                    '${interactions.length} ${interactions.length == 1 ? 'interaction' : 'interactions'} found',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
+                  const SizedBox(height: 16),
+                  for (var interaction in interactions)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _getSeverityIcon(interaction.severity),
+                            color: _getSeverityColor(interaction.severity),
+                            size: 24,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${interaction.medication1} & ${interaction.medication2}',
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  interaction.description,
+                                  style: Theme.of(context).textTheme.bodyLarge,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
-              ),
-            const SizedBox(height: 16),
-            if (notes.isNotEmpty)
-              Text(
-                notes,
-                style: const TextStyle(fontSize: 14),
               ),
           ],
         ),
