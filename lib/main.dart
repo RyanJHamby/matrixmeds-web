@@ -50,7 +50,8 @@ class MatrixMedsApp extends ConsumerWidget {
 Future<void> fetchData() async {
   try {
     print('Checking backend health...');
-    final result = await ApiClient.getHealthCheck();
+    final api = ApiClient();
+    final result = await api.getHealthCheck();
     print('Health check status: ${result['status']}');
     print('Health check response: ${result['body']}');
   } catch (e) {

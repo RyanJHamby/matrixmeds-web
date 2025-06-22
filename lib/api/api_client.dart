@@ -1,49 +1,138 @@
+import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:matrixmeds/models/medication.dart';
+import 'package:matrixmeds/models/interaction.dart';
+import 'package:matrixmeds/api/api_exception.dart';
 
 class ApiClient {
-  static const String baseUrl = 'http://localhost:8000';
-  
-  static Map<String, String> getHeaders() {
+  final String baseUrl;
+  final String apiVersion;
+  final int maxRetries;
+  final Duration retryDelay;
+
+  ApiClient({
+    this.baseUrl = 'http://localhost:8000',
+    this.apiVersion = 'v1',
+    this.maxRetries = 3,
+    this.retryDelay = const Duration(seconds: 1),
+  });
+
+  Map<String, String> getHeaders() {
     return {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Accept',
-      'Access-Control-Request-Method': 'GET',
+      'User-Agent': 'MatrixMeds-Web-Client/1.0',
     };
   }
 
-  static Future<Map<String, dynamic>> getHealthCheck() async {
+  Future<Map<String, dynamic>> getHealthCheck() async {
     try {
-      print('Making health check request to: $baseUrl/health');
-      
-      // Make the request with CORS headers
-      final response = await http.get(
-        Uri.parse('$baseUrl/health'),
-        headers: getHeaders(),
+      final response = await _makeRequest(
+        () => http.get(
+          Uri.parse('$baseUrl/health'),
+          headers: this.getHeaders(),
+        ),
       );
-      
-      print('Health check response: ${response.body}');
-      print('Response status: ${response.statusCode}');
-      print('Response headers: ${response.headers}');
       
       return {
         'status': response.statusCode,
         'body': response.body,
         'headers': response.headers,
       };
-    } catch (e, stackTrace) {
-      print('Error in health check: $e');
-      print('Stack trace: $stackTrace');
-      print('Error type: ${e.runtimeType}');
+    } catch (e) {
+      throw ApiException('Health check failed: $e');
+    }
+  }
+
+  Future<InteractionCheckResponse> checkInteractions(List<String> medications) async {
+    try {
+      final response = await _makeRequest(
+        () => http.post(
+          Uri.parse('$baseUrl/api/$apiVersion/interactions/check'),
+          headers: this.getHeaders(),
+          body: jsonEncode({'medications': medications}),
+        ),
+      );
       
-      // Try to get more details about the error
-      if (e is Exception) {
-        print('Exception message: ${e.toString()}');
+      if (response.statusCode != 200) {
+        throw ApiException('Failed to check interactions: ${response.statusCode}');
       }
       
-      rethrow;
+      return InteractionCheckResponse.fromJson(jsonDecode(response.body));
+    } catch (e) {
+      throw ApiException('Failed to check interactions: $e');
+    }
+  }
+
+  Future<http.Response> _makeRequest(Future<http.Response> Function() request) async {
+    int retries = 0;
+    while (retries < maxRetries) {
+      try {
+        return await request();
+      } catch (e) {
+        if (retries == maxRetries - 1) {
+          throw e;
+        }
+        await Future.delayed(retryDelay);
+        retries++;
+      }
+    }
+    throw ApiException('Request failed after $maxRetries attempts');
+  }
+
+  Future<Interaction> createInteraction(Interaction interaction) async {
+    try {
+      final response = await _makeRequest(
+        () => http.post(
+          Uri.parse('$baseUrl/api/$apiVersion/interactions'),
+          headers: this.getHeaders(),
+          body: jsonEncode(interaction.toJson()),
+        ),
+      );
+      
+      if (response.statusCode != 201) {
+        throw ApiException('Failed to create interaction: ${response.statusCode}');
+      }
+      
+      return Interaction.fromJson(jsonDecode(response.body));
+    } catch (e) {
+      throw ApiException('Failed to create interaction: $e');
+    }
+  }
+
+  Future<MedicationList> getMedications() async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/$apiVersion/medications');
+      final response = await _makeRequest(
+        () => http.get(uri, headers: this.getHeaders()),
+      );
+      
+      if (response.statusCode != 200) {
+        throw ApiException('Failed to get medications: ${response.statusCode}');
+      }
+      
+      return MedicationList.fromJson(jsonDecode(response.body));
+    } catch (e) {
+      throw ApiException('Failed to get medications: $e');
+    }
+  }
+
+  Future<Medication> getMedication(String medicationId) async {
+    try {
+      final response = await _makeRequest(
+        () => http.get(
+          Uri.parse('$baseUrl/api/$apiVersion/medications/$medicationId'),
+          headers: this.getHeaders(),
+        ),
+      );
+      
+      if (response.statusCode != 200) {
+        throw ApiException('Failed to get medication: ${response.statusCode}');
+      }
+      
+      return Medication.fromJson(jsonDecode(response.body));
+    } catch (e) {
+      throw ApiException('Failed to get medication: $e');
     }
   }
 }
