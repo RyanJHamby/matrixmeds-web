@@ -46,9 +46,10 @@ class ApiClient {
 
   Future<InteractionCheckResponse> checkInteractions(List<String> medications) async {
     try {
+      // Use /dev endpoint for unauthenticated access
       final response = await _makeRequest(
         () => http.post(
-          Uri.parse('$baseUrl/api/$apiVersion/interactions/check'),
+          Uri.parse('$baseUrl/api/$apiVersion/interactions/check/dev'),
           headers: this.getHeaders(),
           body: jsonEncode({'medications': medications}),
         ),
